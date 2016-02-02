@@ -42,11 +42,15 @@ namespace osvr {
         class RenderManagerD3D11ATW : public RenderManagerD3D11Base {
         private:
             // Indices into the keys for the Render Thread
-            const UINT rtAcqKey = 0;
-            const UINT rtRelKey = 1;
-            // Indices into the keys for the ATW thread
-            const UINT acqKey = 1;
-            const UINT relKey = 0;
+            // and the ATW thread.
+            // @todo Seems like we don't need two constants with the same
+            // value here.  It works if they are 0 and 1 (but doesn't make
+            // much sense to me).  It also works if they are the same, so
+            // leaving it this way so that in case things really do need
+            // to be different but we're lucking into working it will be
+            // easy to put back.
+            const UINT rtThreadKey = 0;
+            const UINT atwThreadKey = rtThreadKey;
 
             typedef struct {
                 osvr::renderkit::RenderBuffer rtBuffer;
@@ -130,14 +134,15 @@ namespace osvr {
                     }
                     auto bufferInfo = bufferInfoItr->second;
                     //std::cerr << "releasing atwMutex " << (size_t)key << std::endl;
-                    hr = bufferInfoItr->second.atwMutex->ReleaseSync(relKey);
+                    hr = bufferInfoItr->second.atwMutex->ReleaseSync(rtThreadKey);
                     if (FAILED(hr)) {
                       std::cerr << "Could not ReleaseSync in the render manager thread." << std::endl;
                       m_doingOkay = false;
                       mQuit = true;
                     }
                     //std::cerr << "acquiring rtMutex " << (size_t)key << std::endl;
-                    hr = bufferInfoItr->second.rtMutex->AcquireSync(rtAcqKey, INFINITE);
+                    // @todo Replace this and other infinite timeouts with timeouts
+                    hr = bufferInfoItr->second.rtMutex->AcquireSync(rtThreadKey, INFINITE);
                     if (FAILED(hr)) {
                       std::cerr << "Could not lock the render thread's mutex" << std::endl;
                       m_doingOkay = false;
@@ -159,7 +164,7 @@ namespace osvr {
                           m_doingOkay = false;
                           return false;
                       }
-                      hr = bufferInfoItr->second.rtMutex->ReleaseSync(rtRelKey);
+                      hr = bufferInfoItr->second.rtMutex->ReleaseSync(atwThreadKey);
                       if (FAILED(hr)) {
                           std::cerr << "Could not ReleaseSync on a client render target's IDXGIKeyedMutex during present." << std::endl;
                           m_doingOkay = false;
@@ -167,7 +172,7 @@ namespace osvr {
                       }
                       // and lock the ATW thread's mutex
                       //std::cerr << "locking atwMutex " << (size_t)key << std::endl;
-                      hr = bufferInfoItr->second.atwMutex->AcquireSync(rtRelKey, INFINITE);
+                      hr = bufferInfoItr->second.atwMutex->AcquireSync(atwThreadKey, INFINITE);
                       if (FAILED(hr)) {
                           std::cerr << "Could not AcquireSync on the atw IDXGIKeyedMutex during present.";
                           m_doingOkay = false;
@@ -392,7 +397,7 @@ namespace osvr {
 
                   // Start with all render thread's IDXGIKeyedMutex locked
                   //std::cerr << "Locking buffer " << (size_t)buffers[i].D3D11 << " for the render thread." << std::endl;
-                  hr = newInfo.rtMutex->AcquireSync(rtAcqKey, INFINITE);
+                  hr = newInfo.rtMutex->AcquireSync(rtThreadKey, INFINITE);
                   if (FAILED(hr)) {
                     std::cerr << "RenderManagerD3D11ATW::"
                       << "RegisterRenderBuffersInternal: Could not AcquireSync on a game render target's IDXGIKeyedMutex during registration." << std::endl;
