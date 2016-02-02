@@ -284,6 +284,10 @@ int main(int argc, char* argv[]) {
             textureDesc.BindFlags =
                 D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
             textureDesc.CPUAccessFlags = 0;
+            // To be able to share this texture with the asynchronous time
+            // warp thread, it must have a keyed mutex, so we set this flag.
+            // This will also mean that we must acquire the mutex for our
+            // context before rendering to it.
             textureDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
 
             // Create a new render target texture to use.
