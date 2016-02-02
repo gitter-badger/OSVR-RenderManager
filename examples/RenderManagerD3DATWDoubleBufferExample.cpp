@@ -38,6 +38,7 @@ Russ Taylor working through ReliaSolve.com for Sensics, Inc.
 // Standard includes
 #include <iostream>
 #include <string>
+#include <chrono>
 #include <stdlib.h> // For exit()
 
 // This must come after we include <d3d11.h> so its pointer types are defined.
@@ -131,7 +132,8 @@ void RenderView(
 }
 
 void Usage(std::string name) {
-    std::cerr << "Usage: " << name << std::endl;
+    std::cerr << "Usage: " << name << " [millisecondRenderingDelay]" << std::endl;
+    std::cerr << "    (Default rendering delay is 500ms)" << std::endl;
     exit(-1);
 }
 
@@ -145,6 +147,7 @@ struct FrameInfo {
 
 int main(int argc, char* argv[]) {
     // Parse the command line
+    int delayMilliSeconds = 500;
     int realParams = 0;
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
@@ -152,6 +155,8 @@ int main(int argc, char* argv[]) {
         } else {
             switch (++realParams) {
             case 1:
+              delayMilliSeconds = atoi(argv[i]);
+              break;
             default:
                 Usage(argv[0]);
             }
@@ -412,6 +417,8 @@ int main(int argc, char* argv[]) {
     }
 
     size_t iteration = 0;
+    using highresclock = std::chrono::high_resolution_clock;
+
     // Continue rendering until it is time to quit.
     while (!quit) {
         size_t frame = iteration % frameInfo.size();
@@ -428,12 +435,16 @@ int main(int argc, char* argv[]) {
                 frameInfo[frame].depthStencilViews[i], myDevice, myContext);
         }
 
+        // Delay the requested length of time.
+        // Busy-wait so we don't get swapped out longer than we wanted.
+        auto end =
+          highresclock::now() + std::chrono::milliseconds(delayMilliSeconds);
+        do {
+        } while (highresclock::now() < end);
+
         // Send the rendered results to the screen
         render->PresentRenderBuffers(frameInfo[frame].renderBuffers, renderInfo);
 
-        // Sleep for half a second to simulate a very long rendering time.
-        // This will make it possible to see the impact of ATW on the rendering.
-        Sleep(500);
         iteration++;
     }
 
