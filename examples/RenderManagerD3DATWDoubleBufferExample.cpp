@@ -38,6 +38,7 @@ Russ Taylor working through ReliaSolve.com for Sensics, Inc.
 // Standard includes
 #include <iostream>
 #include <string>
+#include <mutex>
 #include <stdlib.h> // For exit()
 
 // This must come after we include <d3d11.h> so its pointer types are defined.
@@ -454,12 +455,13 @@ int main(int argc, char* argv[]) {
                 renderInfo[i].library.D3D11->context);
         }
 
-        // Send the rendered results to the screen
-        render->PresentRenderBuffers(frameInfo[frame].renderBuffers, renderInfo);
-
         // Sleep for half a second to simulate a very long rendering time.
         // This will make it possible to see the impact of ATW on the rendering.
         Sleep(500);
+
+        // Send the rendered results to the screen
+        render->PresentRenderBuffers(frameInfo[frame].renderBuffers, renderInfo);
+
         iteration++;
     }
 
